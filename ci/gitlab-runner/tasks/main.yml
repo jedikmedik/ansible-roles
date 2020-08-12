@@ -1,0 +1,121 @@
+---
+- name: Verify OS requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+    msg: "This role is for RHEL (CentOS) version 7 or higher."
+
+- name: Setup runner's repos
+  yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.name }}"
+    baseurl: "{{ item.baseurl }}"
+    gpgcheck: yes
+    gpgkey:
+      - https://packages.gitlab.com/runner/gitlab-runner/gpgkey
+      - https://packages.gitlab.com/runner/gitlab-runner/gpgkey/runner-gitlab-runner-366915F31B487241.pub.gpg
+    file: runner_gitlab-runner
+    repo_gpgcheck: yes
+    enabled: yes
+    sslcacert: /etc/pki/tls/certs/ca-bundle.crt
+    sslverify: yes
+  loop:
+    - name: runner_gitlab-runner
+      baseurl: https://packages.gitlab.com/runner/gitlab-runner/el/7/$basearch
+    - name: runner_gitlab-runner-source
+      baseurl: https://packages.gitlab.com/runner/gitlab-runner/el/7/SRPMS
+
+- name: Yum install packages
+  yum:
+    name: "{{ runner_packages }}"
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf install packages
+  dnf:
+    name: "{{ runner_packages }}"
+  when: ansible_distribution_major_version|int >= 8
+
+- name: Get runners list
+  command: >
+    gitlab-runner list
+  register: runner_reg_list
+  changed_when: false
+
+- name: Register runner
+  command: >
+    gitlab-runner register
+    --non-interactive
+    --url "{{ runner_url }}"
+    --registration-token "{{ runner_reg_token }}"
+    --executor "shell"
+    --description "{{ runner_description|d(inventory_hostname) }}"
+    --tag-list "{{ runner_tags|join(',') }}"
+    --run-untagged="{{ runner_config['run_untagged']|d()|ternary('true', 'false') }}"
+    --locked="true"
+    --access-level="not_protected"
+    --custom_build_dir-enabled="{{ runner_config['custom_build_dir']|d()|ternary('true', 'false') }}"
+  when: runner_reg_list.stderr is not search(runner_url)
+
+- name: Set concurrent jobs for runner
+  lineinfile:
+    path: /etc/gitlab-runner/config.toml
+    regexp: 'concurrent ='
+    line: "concurrent = {{ runner_config['concurrent']|d('1') }}"
+  notify: restart runner
+
+- name: Ansible section
+  block:
+    - name: Yum section
+      block:
+        - name: Yum install ansible packages
+          yum:
+            name: "{{ runner_ansible_packages|union(runner_ansible_packages_7) }}"
+
+        - name: Yum install ansible packages (sb)
+          yum:
+            name: "{{ runner_ansible_packages_sb_7 }}"
+          when: base_southbridge_repo
+      when: ansible_distribution_major_version|int <= 7
+
+    - name: Dnf section
+      block:
+        - name: Dnf install ansible packages
+          dnf:
+            name: "{{ runner_ansible_packages|union(runner_ansible_packages_8) }}"
+
+        - name: Dnf install ansible packages (sb)
+          dnf:
+            name: "{{ runner_ansible_packages_sb_8 }}"
+          when: base_southbridge_repo
+      when: ansible_distribution_major_version|int >= 8
+
+    - name: Become section
+      block:
+        - name: Pip install ansible and modules
+          pip:
+            virtualenv: "/home/gitlab-runner/ansible-{{ runner_ansible_version }}"
+            name: "{{ runner_ansible_libs }}"
+
+        - name: Symlink latest
+          file:
+            src: "/home/gitlab-runner/ansible-{{ runner_ansible_version }}"
+            dest: /home/gitlab-runner/ansible-latest
+            state: link
+            force: yes
+
+        - name: Template ansible config
+          template:
+            src: ansible.cfg.j2
+            dest: /home/gitlab-runner/.ansible.cfg
+          when: runner_ansible_cfg|length > 0
+
+        - name: Remove ansible config
+          file:
+            path: /home/gitlab-runner/.ansible.cfg
+            state: absent
+          when: runner_ansible_cfg|length == 0
+      become: yes
+      become_user: gitlab-runner
+  when: runner_ansible
+...

@@ -1,0 +1,30 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+/var/www/*/log/*nginx-*.log {
+    create 0644 nginx adm
+    daily
+    size 4096k
+    maxage 31
+    rotate 7
+    missingok
+    notifempty
+    compress
+    sharedscripts
+    prerotate
+	if [ -d /etc/logrotate.d/nginx-prerotate ]; then
+	    run-parts /etc/logrotate.d/nginx-prerotate;
+	fi;
+    endscript
+    postrotate
+{% if ansible_service_mgr == 'systemd' %}
+	if [ -f /run/nginx.pid ]; then
+	    /bin/kill -USR1 `cat /run/nginx.pid`;
+	fi;
+{% else %}
+	if [ -f /var/run/nginx.pid ]; then
+	    /bin/kill -USR1 `cat /var/run/nginx.pid`;
+	fi;
+{% endif %}
+    endscript
+    su root nginx
+}

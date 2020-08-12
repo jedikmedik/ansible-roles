@@ -1,0 +1,16 @@
+---
+galaxy_info:
+  author: Mesropyan Nikolay
+  description: Install nodejs and yarn
+  company: Southbridge LLC
+  min_ansible_version: 2.7
+  license: BSD
+
+  platforms:
+    - name: EL
+      versions:
+        - 7
+        - 8
+
+dependencies: []
+...

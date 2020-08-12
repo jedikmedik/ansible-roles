@@ -1,0 +1,8 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+{% for item in runner_ansible_cfg %}
+[{{ item.section }}]
+{% for key, value in item.options|dictsort %}
+{{ key }} = {{ value }}
+{% endfor %}
+{% endfor %}

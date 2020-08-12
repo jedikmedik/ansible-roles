@@ -1,0 +1,15 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart envoy
+  systemd:
+    name: envoy.service
+    state: restarted
+
+- name: reload envoy
+  systemd:
+    name: envoy.service
+    state: reloaded
+...

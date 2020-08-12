@@ -1,0 +1,12 @@
+---
+nginx_core: {}
+nginx_http: {}
+nginx_gzip: {}
+nginx_vhost_default: {}
+nginx_vhost_files: []
+nginx_default_server: {}
+nginx_http_directives: {}
+nginx_modules_rpm: []
+nginx_modules_so: []
+nginx_certbot: {}
+...

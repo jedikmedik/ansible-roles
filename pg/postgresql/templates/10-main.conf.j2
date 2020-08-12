@@ -1,0 +1,136 @@
+# THIS FILE IS ANSIBLE MANAGED.
+# HANDS OFF!
+
+# - Connection Settings -
+
+listen_addresses		= '{{ postgresql_conf['listen_addresses']|default('*') }}'
+port				= {{ postgresql_conf['port']|default('5432') }}
+max_connections			= {{ postgresql_conf['max_connections']|default('100') }}
+
+# - Memory -
+
+{% set auto_shared_buffers = ansible_memtotal_mb / 100 * 20 %}
+shared_buffers			= {{ postgresql_conf['shared_buffers']|default(auto_shared_buffers|int ~ 'MB') }}
+temp_buffers			= {{ postgresql_conf['temp_buffers']|default('8MB') }}
+{% set auto_work_mem = ansible_memtotal_mb / 100 * 1 %}
+work_mem			= {{ postgresql_conf['work_mem']|default(auto_work_mem|int ~ 'MB') }}
+{% set auto_maintenance_work_mem = ansible_memtotal_mb / 100 * 4 %}
+maintenance_work_mem		= {{ postgresql_conf['maintenance_work_mem']|default(auto_maintenance_work_mem|int ~ 'MB') }}
+{% if postgresql_conf['max_stack_depth'] is defined %}
+max_stack_depth			= {{ postgresql_conf['max_stack_depth'] }}
+{% endif %}
+
+# - Disk -
+
+# - Asynchronous Behavior -
+
+effective_io_concurrency	= {{ postgresql_conf['effective_io_concurrency']|default('2') }}
+
+# - WAL Settings -
+
+{% if postgresql_pcmk_enable or postgresql_replication_enable %}
+{% if postgresql_version_raw is version('10.0', '>=') %}
+wal_level			= replica
+{% else %}
+wal_level			= hot_standby
+{% endif %}
+{% else %}
+wal_level			= minimal
+{% endif %}
+wal_log_hints			= {{ postgresql_conf['wal_log_hints']|d()|ternary('on','off') }}
+
+# - Checkpoints -
+
+{% if postgresql_conf['max_wal_size'] is defined %}
+max_wal_size			= {{ postgresql_conf['max_wal_size'] }}
+{% endif %}
+
+# - Archiving -
+
+archive_mode			= off
+{% if postgresql_pcmk_enable %}
+# - Replication: Sending Server -
+
+max_wal_senders			= 10
+wal_keep_segments		= {{ postgresql_conf['wal_keep_segments']|default('32') }}
+wal_sender_timeout		= 5000
+max_replication_slots		= 10
+
+# - Replication: Standby Servers -
+
+hot_standby			= on
+max_standby_archive_delay	= -1
+max_standby_streaming_delay	= -1
+wal_receiver_status_interval	= 2
+wal_receiver_timeout		= 5000
+{% elif postgresql_replication_enable %}
+# - Replication: Sending Server -
+
+# - Replication: Standby Servers -
+
+hot_standby			= on
+
+{% else %}
+# - Replication: Sending Server -
+
+max_wal_senders			= 0
+{% endif %}
+
+# - Planner Cost Constants -
+
+{% if postgresql_conf['random_page_cost'] is defined %}
+random_page_cost		= {{ postgresql_conf['random_page_cost'] }}
+{% endif %}
+{% set auto_effective_cache_size = ansible_memtotal_mb / 100 * 50 %}
+effective_cache_size		= {{ postgresql_conf['effective_cache_size']|default(auto_effective_cache_size|int ~ 'MB') }}
+
+# - What to Log -
+
+log_timezone			= '{{ postgresql_conf['log_timezone']|default('W-SU') }}'
+
+# - Query/Index Statistics Collector -
+
+{% if postgresql_conf['track_activity_query_size'] is defined %}
+track_activity_query_size	= {{ postgresql_conf['track_activity_query_size'] }}
+{% endif %}
+
+# - Autovacuum Parameters -
+
+autovacuum			= on
+autovacuum_max_workers		= {{ postgresql_conf['autovacuum_max_workers']|default('3') }}
+autovacuum_vacuum_threshold	= {{ postgresql_conf['autovacuum_vacuum_threshold']|default('50') }}
+autovacuum_analyze_threshold	= {{ postgresql_conf['autovacuum_analyze_threshold']|default('50') }}
+autovacuum_vacuum_scale_factor	= {{ postgresql_conf['autovacuum_vacuum_scale_factor']|default('0.2') }}
+autovacuum_analyze_scale_factor	= {{ postgresql_conf['autovacuum_analyze_scale_factor']|default('0.1') }}
+
+# - Locale and Formatting -
+
+datestyle			= '{{ postgresql_conf['datestyle']|default('iso, dmy') }}'
+timezone			= '{{ postgresql_conf['timezone']|default('W-SU') }}'
+lc_messages			= '{{ postgresql_lc_messages }}'
+lc_monetary			= '{{ postgresql_lc_monetary|default(postgresql_locale) }}'
+lc_numeric			= '{{ postgresql_lc_numeric|default(postgresql_locale) }}'
+lc_time				= '{{ postgresql_lc_time|default(postgresql_locale) }}'
+default_text_search_config	= '{{ postgresql_conf['default_text_search_config']|default('pg_catalog.russian') }}'
+
+# - Shared Library Preloading -
+
+{% if postgresql_conf['shared_preload_libraries'] is defined %}
+shared_preload_libraries	= '{{ postgresql_conf['shared_preload_libraries']|join(',') }}'
+{% endif %}
+
+# - Lock management -
+
+{% if postgresql_conf['deadlock_timeout'] is defined %}
+deadlock_timeout		= {{ postgresql_conf['deadlock_timeout'] }}
+{% endif %}
+
+# - Error Handling
+
+{% if postgresql_pcmk_enable %}
+restart_after_crash		= false
+{% else %}
+restart_after_crash		= true
+{% endif %}
+
+# - The End -

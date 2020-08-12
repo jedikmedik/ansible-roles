@@ -1,0 +1,11 @@
+---
+deploy_build_cleanup: False
+deploy_build_packages: []
+deploy_prod_db: { }
+deploy_test_db: { }
+deploy_build_environment: { }
+deploy_test_environment: { }
+deploy_prod_environment: { }
+deploy_secret_key_base: ""
+deploy_version: HEAD
+...

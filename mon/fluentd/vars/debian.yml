@@ -1,0 +1,5 @@
+---
+fluentd_dependencies:
+  - apt-transport-https
+
+fluentd_plugins_dependencies: []

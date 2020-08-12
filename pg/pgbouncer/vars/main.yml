@@ -1,0 +1,11 @@
+---
+pgbouncer_packages:
+  - "pgbouncer"
+  - "postgresql{{ postgresql_version_norm }}"
+
+pgbouncer_packages_8:
+  - python2-psycopg2
+
+pgbouncer_userlist_file: /etc/pgbouncer/userlist.txt
+pgbouncer_hba_file: /etc/pgbouncer/bouncer_hba.conf
+...

@@ -1,0 +1,48 @@
+---
+- name: Verify OS requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+    msg: "This role is for RHEL (CentOS) version 7 or higher."
+
+- name: Create dirs
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop:
+    - path: /var/lib/flags
+
+- name: Create prometheus user
+  user:
+    name: prometheus
+    home: /var/lib/prometheus
+    shell: /sbin/nologin
+
+- name: Include node_exporter
+  include_tasks: node_exporter.yml
+
+- name: Include prometheus
+  include_tasks: prometheus.yml
+  when: prom_master
+
+- name: Include grafana
+  include_tasks: grafana.yml
+  when: prom_grafana
+
+- name: Include nginxlog_exporter
+  include_tasks: nginxlog_exporter.yml
+  when: prom_nginxlog_exporter
+
+
+- name: Include blackbox_exporter
+  include_tasks: blackbox_exporter.yml
+  when: prom_blackbox_exporter
+
+- name: Include alertmanager
+  include_tasks: alertmanager.yml
+  when: prom_alertmanager
+...

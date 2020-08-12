@@ -1,0 +1,10 @@
+---
+- name: Converge
+  hosts: all
+  no_log: false
+  become: yes
+  vars:
+    - nodejs_major_version: '8'
+    - nodejs_yarn_install: True
+  roles:
+    - role: nodejs

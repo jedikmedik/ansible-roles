@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: Mesropyan Nikolay
+  description: Install and configure nftables
+  company: Southbridge LLC
+  min_ansible_version: 2.8
+  license: BSD
+
+  platforms:
+    - name: EL
+      versions:
+        - 8
+
+dependencies: []
+...

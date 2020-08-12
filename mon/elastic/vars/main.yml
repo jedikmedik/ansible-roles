@@ -1,0 +1,5 @@
+---
+elk_sb_bin: "/srv/southbridge/bin"
+elk_sb_etc: "/srv/southbridge/etc"
+elk_flag_file: "/root/.es"
+...

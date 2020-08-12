@@ -1,0 +1,52 @@
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+  access_log_path: /var/log/envoy/admin_access.log
+
+static_resources:
+  listeners:
+  - name: default
+    address:
+      socket_address:
+        address: 127.0.0.1
+        port_value: 9921
+
+    filter_chains:
+    - filters:
+      - name: envoy.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+          stat_prefix: egress
+          route_config:
+            name: default
+            virtual_hosts:
+            - name: default
+              domains: [ "*" ]
+              routes:
+              - match:
+                 prefix: "/"
+                route:
+                  cluster: lb
+                  #timeout: 1s
+                  #retry_policy:
+                  #  retry_on: 5xx
+                  #  num_retries: 1
+                  #  per_try_timeout: 0.3s
+          http_filters:
+          - name: envoy.router
+          access_log:
+            - name: envoy.file_access_log
+              config:
+                path: /var/log/envoy/access.log
+
+  clusters:
+  - name: lb
+    type: STATIC
+    lb_policy: ROUND_ROBIN
+    connect_timeout: 0.25s
+    hosts:
+    - socket_address:
+        address: {{ hostvars[deploy_lb_node]['ansible_host'] }}
+        port_value: 80

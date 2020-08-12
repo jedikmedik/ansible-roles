@@ -1,0 +1,5 @@
+; THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+; User vars
+{% for key, value in base_sysctl_vars|dictsort %}
+{{ key }} = {{ value }}
+{% endfor %}

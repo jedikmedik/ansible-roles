@@ -1,0 +1,21 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+  when: ansible_service_mgr == 'systemd'
+
+- name: validate nginx
+  command: >
+    nginx -t
+  notify: reload nginx
+
+- name: reload nginx
+  service:
+    name: nginx
+    state: reloaded
+
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted
+...

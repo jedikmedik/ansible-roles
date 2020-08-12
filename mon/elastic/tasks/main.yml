@@ -1,0 +1,118 @@
+---
+- name: install elasticsearch repo
+  when: elk_install_es or elk_install_kibana
+  yum_repository:
+    name: "elasticsearch-{{ elk_version }}.x"
+    description: "Elasticsearch repository for {{ elk_version }}.x packages"
+    baseurl: "https://artifacts.elastic.co/packages/{{ elk_version }}.x/yum"
+    gpgcheck: yes
+    gpgkey: "https://artifacts.elastic.co/GPG-KEY-elasticsearch"
+    enabled: yes
+
+- block:
+  - name: install es
+    yum:
+      name: java-1.8.0-openjdk-headless,elasticsearch,jq
+      state: present
+    when: ansible_distribution_major_version|int <= 7
+  - name: install es
+    dnf:
+      name: java-1.8.0-openjdk-headless,elasticsearch,jq
+      state: present
+    when: ansible_distribution_major_version|int >= 8
+  - name: tune elasticsearch
+    lineinfile:
+      path: /etc/elasticsearch/elasticsearch.yml
+      regexp: "^\\s*#*\\s*{{ item.key }}:"
+      line: "{{ item.key }}: {{ item.value}}"
+    with_dict: "{{ elk_es_options }}"
+    notify: restart elasticsearch
+  - name: tune jvm.options
+    lineinfile:
+      path: /etc/elasticsearch/jvm.options
+      regexp: "^-{{ item.key }}"
+      line: "-{{ item.key }}{{ item.value }}"
+    with_dict: "{{ elk_es_jvm_options }}"
+    notify: restart elasticsearch
+  - name: start and enable elasticsearch
+    service:
+      name: elasticsearch
+      state: started
+      enabled: yes
+  when: elk_install_es
+
+- block:
+  - name: install kibana
+    yum:
+      name: kibana
+      state: present
+    when: ansible_distribution_major_version|int <= 7
+  - name: install kibana
+    dnf:
+      name: kibana
+      state: present
+    when: ansible_distribution_major_version|int >= 8
+  - name: tune kibana/kibana.yml
+    lineinfile:
+      path: /etc/kibana/kibana.yml
+      regexp: "^\\s*#*\\s*{{ item.key }}:"
+      line: "{{ item.key }}: {{ item.value}}"
+    with_dict: "{{ elk_kibana_options }}"
+    notify: restart kibana
+  - name: start and enable kibana
+    service:
+      name: kibana
+      state: started
+      enabled: yes
+  when: elk_install_kibana
+
+- block:
+  - name: install curator repo
+    yum_repository:
+      name: curator-5
+      description: "CentOS/RHEL {{ ansible_distribution_major_version }} repository for Elasticsearch Curator 5.x packages"
+      baseurl: "https://packages.elastic.co/curator/5/centos/{{ ansible_distribution_major_version }}"
+      gpgcheck: yes
+      gpgkey: "https://packages.elastic.co/GPG-KEY-elasticsearch"
+      enabled: yes
+  - name: install curator
+    yum:
+      name: elasticsearch-curator
+      state: present
+    when: ansible_distribution_major_version|int <= 7
+  - name: install curator
+    dnf:
+      name: elasticsearch-curator
+      state: present
+    when: ansible_distribution_major_version|int >= 8
+  - name: template curator cron job
+    template:
+      src: "{{ item }}.j2"
+      dest: "/{{ item }}"
+      mode: "0644"
+    notify: reload crond
+    with_items:
+      - "etc/cron.d/_sb_curator"
+  - name: Curator dir
+    file:
+      path: "/etc/curator"
+      state: directory
+      mode: "0755"
+  - name: template curator config
+    template:
+      backup: yes
+      src: "{{ item }}.j2"
+      dest: "/{{ item }}"
+      mode: "0644"
+    with_items:
+      - "etc/curator/config.yml"
+  - name: template curator actions file
+    template:
+      backup: yes
+      src: "{{ item }}.j2"
+      dest: "/{{ item }}"
+      mode: "0644"
+    with_items:
+      - "etc/curator/action_file.yml"
+  when: elk_install_curator
+...

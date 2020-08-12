@@ -1,0 +1,23 @@
+---
+- name: Create dirs
+  file:
+    path: "{{ item[0].home|d('/home/' ~ item[0].name) }}/{{ item[1].dest|dirname }}"
+    state: directory
+    owner: "{{ item[0].name }}"
+    group: "{{ item[0].name }}"
+    mode: "{{ item[1].dirmode|d('0755') }}"
+  loop: "{{ useradd_users|subelements('files', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item[0].name }} : {{ item[1].dest|dirname }}"
+
+- name: Copy files
+  copy:
+    src: "{{ item[1].src }}"
+    dest: "{{ item[0].home|d('/home/' ~ item[0].name) }}/{{ item[1].dest }}"
+    owner: "{{ item[0].name }}"
+    group: "{{ item[0].name }}"
+    mode: "{{ item[1].mode|d('0644') }}"
+  loop: "{{ useradd_users|subelements('files', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item[0].name }} : {{ item[1].dest }}"
+...

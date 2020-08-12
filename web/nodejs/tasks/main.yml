@@ -1,0 +1,58 @@
+---
+- name: Check required variable
+  assert:
+    that:
+      - nodejs_major_version is defined
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+    msg: "Required variable is not defined or other requirements is not satisfied"
+
+- name: Yum section
+  block:
+    - name: Install  nodejs repo
+      yum:
+        name: >
+          https://rpm.nodesource.com/pub_{{ nodejs_major_version }}.x/el/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/nodesource-release-el{{ ansible_distribution_major_version }}-1.noarch.rpm
+
+    - name: Yum install nodejs
+      yum:
+        name: nodejs
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf section
+  block:
+    - name: Install  nodejs repo
+      dnf:
+        name: >
+          https://rpm.nodesource.com/pub_{{ nodejs_major_version }}.x/el/{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/nodesource-release-el{{ ansible_distribution_major_version }}-1.noarch.rpm
+
+    - name: Dnf install nodejs
+      dnf:
+        name: nodejs
+  when: ansible_distribution_major_version|int >= 8
+
+- name: Yarn section
+  block:
+    - name: Ensure yarn repository key is present
+      rpm_key:
+        key: "https://dl.yarnpkg.com/rpm/pubkey.gpg"
+
+    - name: Create nodejs repo
+      yum_repository:
+        name: yarn
+        description: Yarn repo
+        file: external_repos
+        baseurl:  https://dl.yarnpkg.com/rpm/
+        enabled: yes
+
+    - name: Yum install yarn
+      yum:
+        name: yarn
+      when: ansible_distribution_major_version|int <= 7
+
+    - name: Dnf install yarn
+      dnf:
+        name: yarn
+      when: ansible_distribution_major_version|int >= 8
+  when: nodejs_yarn_install|d()
+...

@@ -1,0 +1,29 @@
+---
+- name: Verify role requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 8
+      - ansible_version.full is version('2.8.0', '>=')
+    msg: "This role is for RHEL (CentOS) version 8 or higher."
+
+- name: Install nftables
+  dnf:
+    name: "{{ nftables_packages }}"
+
+- name: Template nftables.conf
+  template:
+    src: "{{ item }}.j2"
+    dest: "/{{ item }}"
+    owner: root
+    mode: "0644"
+  loop:
+    - etc/sysconfig/nftables.conf
+  notify: reload nftables
+
+- name: Enable nftables service
+  systemd:
+    name: nftables.service
+    state: started
+    enabled: yes
+...

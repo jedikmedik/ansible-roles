@@ -1,0 +1,16 @@
+---
+nginx_self_signed:
+  cert: /etc/pki/tls/certs/nginx.pem
+  key: /etc/pki/tls/private/nginx.pem
+  csr: /etc/pki/tls/private/nginx.csr
+
+nginx_packages:
+  - nginx
+
+nginx_packages_7:
+  - goaccess
+  - python2-pyOpenSSL-16.2.0-3.el7.centos
+
+nginx_packages_8:
+  - python3-pyOpenSSL
+...

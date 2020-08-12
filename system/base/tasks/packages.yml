@@ -1,0 +1,52 @@
+---
+- name: Remove southbridge repo
+  file:
+    path: /etc/yum.repos.d/southbridge-stable.repo
+    state: absent
+  when: not base_southbridge_repo
+
+- name: Yum install epel repo
+  yum:
+    name: epel-release
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf install epel repo
+  dnf:
+    name: epel-release
+  when: ansible_distribution_major_version|int >=8
+
+- name: Setup southbridge repo
+  yum_repository:
+    name: southbridge-stable
+    description: Southbridge stable packages repository
+    baseurl: http://rpms.southbridge.ru/rhel{{ ansible_distribution_major_version }}/stable/$basearch/
+    gpgcheck: yes
+    gpgkey: http://rpms.southbridge.ru/RPM-GPG-KEY-southbridge
+    enabled: yes
+    priority: "10"
+  when: base_southbridge_repo
+
+- name: Yum section
+  block:
+    - name: Yum install required packages
+      yum:
+        name: "{{ base_packages|union(base_add_packages)|union(base_add_packages_7) }}"
+
+    - name: Yum remove unnecessary packages
+      yum:
+        name: "{{ base_remove_packages }}"
+        state: absent
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf section
+  block:
+    - name: Dnf install required packages
+      dnf:
+        name: "{{ base_packages|union(base_add_packages)|union(base_add_packages_8) }}"
+
+    - name: Dnf remove unnecessary packages
+      dnf:
+        name: "{{ base_remove_packages }}"
+        state: absent
+  when: ansible_distribution_major_version|int >= 8 
+...

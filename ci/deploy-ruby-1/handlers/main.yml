@@ -1,0 +1,13 @@
+---
+- name: validate nginx
+  delegate_to: "{{ deploy_lb_node }}"
+  command: >
+    nginx -t
+  notify: reload nginx
+
+- name: reload nginx
+  delegate_to: "{{ deploy_lb_node }}"
+  service:
+    name: nginx
+    state: reloaded
+...

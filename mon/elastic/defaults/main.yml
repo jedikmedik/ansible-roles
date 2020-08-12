@@ -1,0 +1,22 @@
+---
+elk_version: "6"
+
+elk_install_es: true
+elk_es_options:
+  network.host: 127.0.0.1
+  http.port: 9200
+  xpack.security.enabled: "false"
+  xpack.monitoring.enabled: "false"
+
+elk_es_jvm_options: []
+
+elk_install_kibana: false
+elk_kibana_options:
+  server.port: 5601
+  server.host: 127.0.0.1
+  elasticsearch.url: http://127.0.0.1:9200
+
+elk_install_curator: false
+elk_curator_schedule: "*/5 * * * * nobody"
+elk_curator_cronline: "LC_ALL=en_US.utf-8 /usr/bin/curator --config /etc/curator/config.yml /etc/curator/action_file.yml"
+...

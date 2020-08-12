@@ -1,0 +1,5 @@
+---
+prom_grafana_packages:
+  - urw-fonts
+  - grafana
+...

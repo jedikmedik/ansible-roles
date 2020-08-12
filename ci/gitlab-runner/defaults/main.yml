@@ -1,0 +1,30 @@
+---
+runner_ansible: False
+runner_config: { }
+runner_ansible_cfg: []
+
+runner_ansible_packages:
+  - unzip
+
+runner_ansible_packages_7:
+  - python-virtualenv
+  - python-pip
+
+runner_ansible_packages_8:
+  - python3-virtualenv
+  - python3-pip
+
+runner_ansible_packages_sb_7:
+  - python2-mitogen-v0.2.9-2.el7.noarch
+
+runner_ansible_packages_sb_8:
+  - python3-mitogen-v0.2.9-1.el8.noarch
+
+runner_ansible_libs:
+  - "ansible=={{ runner_ansible_version }}"
+  - netaddr
+  - selinux
+  - jmespath
+
+base_southbridge_repo: True
+...

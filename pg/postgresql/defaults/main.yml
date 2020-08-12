@@ -1,0 +1,37 @@
+---
+postgresql_version_raw: "{{ postgresql_version|string }}"
+postgresql_version_norm: "{{ postgresql_version_raw|regex_replace('\\.', '') }}"
+
+postgresql_homedir: "/var/lib/pgsql"
+postgresql_basedir: "{{ postgresql_homedir }}/{{ postgresql_version_raw }}"
+postgresql_datadir: "{{ postgresql_basedir }}/data"
+
+postgresql_encoding: "utf8"
+postgresql_locale: "ru_RU.UTF-8"
+postgresql_lc_messages: "en_US.UTF-8"
+
+postgresql_pcmk_enable: false
+postgresql_pcmk_ra_org: "southbridge"
+postgresql_pcmk_force_ra_update: false
+postgresql_pcmk_force_pcs_update: false
+postgresql_pcmk_rmlock_enable: false
+
+postgresql_pcmk_pcsd_restart_enable: false
+postgresql_pcmk_pcsd_restart_hour: 37
+postgresql_pcmk_pcsd_restart_minute: 37
+
+postgresql_pgpass_entries: []
+postgresql_recovery_conf: {}
+postgresql_replication_enable: false
+
+postgresql_conf: {}
+
+postgresql_roles: []
+postgresql_db: []
+
+postgresql_additional_packages: []
+postgresql_reload_direct: false
+pg_stat_statements: {}
+
+base_southbridge_repo: True
+...

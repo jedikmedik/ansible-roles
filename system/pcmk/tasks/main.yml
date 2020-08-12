@@ -1,0 +1,5 @@
+---
+- name: Main include
+  include_tasks: entry.yml
+  when: pcmk_pool is defined
+...

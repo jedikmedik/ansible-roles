@@ -1,0 +1,35 @@
+---
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart node_exporter
+  systemd:
+    name: node_exporter.service
+    state: restarted
+
+- name: restart nginxlog_exporter
+  systemd:
+    name: prometheus-nginxlog-exporter.service
+    state: restarted
+
+- name: restart prometheus
+  systemd:
+    name: prometheus.service
+    state: restarted
+
+- name: reload prometheus
+  systemd:
+    name: prometheus.service
+    state: reloaded
+
+- name: restart blackbox_exporter
+  systemd:
+    name: blackbox_exporter.service
+    state: restarted
+
+- name: restart alertmanager
+  systemd:
+    name: alertmanager.service
+    state: restarted
+...

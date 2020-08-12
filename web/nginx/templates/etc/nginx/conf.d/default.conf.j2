@@ -1,0 +1,49 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+{% if nginx_default_server.http|d(True) %}
+server {
+    listen          80 default_server;
+
+    root            /var/www/html;
+
+    location / {
+        index       index.html;
+    }
+
+    location /apache-status {
+	alias	    /var/www/html;
+	index	    http.html;
+    }
+
+    location /phpMyAdmin {
+	alias	    /var/www/html;
+	index	    http.html;
+    }
+}
+{% endif %}
+
+{% if nginx_default_server.https|d(True) %}
+server {
+    listen          443 default_server ssl;
+
+    root            /var/www/html;
+
+    ssl_certificate	{{ nginx_self_signed.cert }};
+    ssl_certificate_key	{{ nginx_self_signed.key }};
+
+    location / {
+        index       index.html;
+    }
+
+    location /apache-status {
+	alias	    /var/www/html;
+	index	    http.html;
+    }
+
+    location /phpMyAdmin {
+	alias	    /var/www/html;
+	index	    http.html;
+    }
+}
+
+{% endif %}

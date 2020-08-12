@@ -1,0 +1,16 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+{% if ansible_service_mgr == 'systemd' %}
+check process nginx with pidfile /run/nginx.pid
+    start program = "/usr/bin/systemctl start nginx.service" with timeout 30 seconds
+    stop program = "/usr/bin/systemctl stop nginx.service" with timeout 30 seconds
+{% else %}
+check process nginx with pidfile /var/run/nginx.pid
+    start program = "/sbin/service nginx start" with timeout 30 seconds
+    stop program = "/sbin/service nginx stop" with timeout 30 seconds
+{% endif %}
+    if failed url http://localhost/nginx-status
+        for 3 cycles
+        then alert
+    if 3 restarts within 6 cycles then exec "/bin/bash -c '/usr/bin/monit unmonitor nginx && /bin/sleep 3600 && /usr/bin/monit monitor nginx'"
+

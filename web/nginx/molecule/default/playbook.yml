@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  no_log: false
+  become: yes
+  vars:
+  roles:
+    - role: base
+    - role: nginx

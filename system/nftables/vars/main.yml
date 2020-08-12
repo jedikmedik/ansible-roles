@@ -1,0 +1,4 @@
+---
+nftables_packages:
+  - nftables
+...

@@ -1,0 +1,43 @@
+---
+- name: Zsh section
+  block:
+    - name: Set prompt fact if host
+      set_fact:
+        prompt_color_user: 'GREEN'
+        prompt_color_root: 'RED'
+      when: >
+        ansible_virtualization_role == "host"
+        or ansible_virtualization_role is undefined
+
+    - name: Set prompt fact if guest
+      set_fact:
+        prompt_color_user: 'CYAN'
+        prompt_color_root: 'YELLOW'
+      when: ansible_virtualization_role == "guest"
+
+    - name: Set env color
+      set_fact:
+        prompt_color_env: "{{ base_env_color[env|d('auxiliary')] }}"
+
+    - name: Template zshrc
+      template:
+        src: etc/zshrc.j2
+        dest: /etc/zshrc
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Git clone zsh-syntax-highlighting
+      git:
+        repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+        dest: /usr/local/lib/zsh/zsh-syntax-highlighting
+        version: master
+        update: no
+  when: base_zsh_enable
+
+- name: >
+    Changing root shell. Don't do it in real envs!
+  user:
+    name: root
+    shell: "{{ base_zsh_enable|ternary('/bin/zsh', '/bin/bash') }}"
+...

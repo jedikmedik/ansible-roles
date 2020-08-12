@@ -1,0 +1,36 @@
+---
+- name: Verify OS requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+    msg: "This role is for RHEL (CentOS) version 7 or higher."
+
+- name: >
+    Set SELinux state; think twice before
+    disabling SELinux on production environment!
+  selinux:
+    policy: targeted
+    state: "{{ base_selinux_state }}"
+
+- name: Set hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Import packages
+  import_tasks: packages.yml
+
+- name: Initialize etckeeper
+  command: >
+    etckeeper init
+  args:
+    chdir: "/etc"
+    creates: "/etc/.etckeeper"
+  notify: etckeeper commit
+
+- name: Import system
+  import_tasks: system.yml
+
+- name: Include shell settings
+  include_tasks: shell.yml
+...

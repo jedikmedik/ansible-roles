@@ -1,0 +1,24 @@
+---
+- name: Groups
+  group:
+    name: "{{ item.name }}"
+    state: present
+  when:
+    - item.state|d(True)
+    - item.gid is not defined
+  loop: "{{ useradd_groups }}"
+  loop_control:
+    label: "group {{ item.name }}"
+
+- name: Groups with GID
+  group:
+    name: "{{ item.name }}"
+    gid: "{{ item.gid }}"
+    state: present
+  when:
+    - item.state|d(True)
+    - item.gid is defined
+  loop: "{{ useradd_groups }}"
+  loop_control:
+    label: "group {{ item.name }}"
+...

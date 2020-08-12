@@ -1,0 +1,17 @@
+---
+- name: Include groups (add)
+  include_tasks: groups_add.yml
+  when: useradd_groups|length > 0
+
+- name: Include users
+  include_tasks: users.yml
+  when: useradd_users|length > 0
+
+- name: Include groups (remove)
+  include_tasks: groups_rm.yml
+  when: useradd_groups|length > 0
+
+- name: Include files
+  include_tasks: files.yml
+  when: useradd_users|length > 0
+...

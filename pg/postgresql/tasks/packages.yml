@@ -1,0 +1,55 @@
+---
+- name: PostgreSQL repo
+  yum_repository:
+    name: "pgdg{{ postgresql_version_norm }}"
+    description: "PostgreSQL {{ postgresql_version_raw }} $releasever - $basearch"
+    baseurl: "https://download.postgresql.org/pub/repos/yum/{{ postgresql_version_raw }}/redhat/rhel-$releasever-$basearch"
+    file: "pgdg-{{ postgresql_version_norm }}-centos"
+    gpgcheck: yes
+    enabled: yes
+    gpgkey: "http://ftp.postgresql.org/pub/repos/yum/RPM-GPG-KEY-PGDG-{{ postgresql_version_norm }}"
+
+- name: Yum section
+  block:
+    - name: PostgreSQL packages
+      yum:
+        name:
+          - postgresql{{ postgresql_version_norm }}
+          - postgresql{{ postgresql_version_norm }}-server
+          - postgresql{{ postgresql_version_norm }}-contrib
+          - python-psycopg2
+
+    - name: Some other packages
+      yum:
+        name: "{{ postgresql_other_packages }}"
+      when: base_southbridge_repo
+
+    - name: Additional packages
+      yum:
+        name: "{{ postgresql_additional_packages }}"
+      when: postgresql_additional_packages|length > 0
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf section
+  block:
+    - name: PostgreSQL packages
+      dnf:
+        name:
+          - postgresql{{ postgresql_version_norm }}
+          - postgresql{{ postgresql_version_norm }}-server
+          - postgresql{{ postgresql_version_norm }}-contrib
+          - python3-psycopg2
+          - glibc-langpack-ru
+        disablerepo: AppStream
+
+    - name: Some other packages
+      dnf:
+        name: "{{ postgresql_other_packages }}"
+      when: base_southbridge_repo
+
+    - name: Additional packages
+      dnf:
+        name: "{{ postgresql_additional_packages }}"
+      when: postgresql_additional_packages|length > 0
+  when: ansible_distribution_major_version|int >= 8
+...

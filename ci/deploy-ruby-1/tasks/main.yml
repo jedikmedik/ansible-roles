@@ -1,0 +1,167 @@
+---
+- name: Verify Ansible version requirements
+  assert:
+    that:
+      - ansible_version.full is version('2.7.10', '>=')
+    msg: >
+      You must update Ansible to at least 2.7.10 to use this role
+  tags: [ always ]
+
+- name: Verify required variables
+  assert:
+    that:
+      - ci_project_dir is defined
+    msg: >
+      You must use this role ONLY from GitLab CI pipelines with tags
+  tags: [ build, deploy ]
+
+- name: Include roles
+  include_role:
+    name: "{{ role }}"
+    apply:
+      tags: [ setup, deploy ]
+  loop:
+    - rvm
+    - nodejs
+  loop_control:
+    loop_var: role
+  vars:
+    rvm_puma: {}
+  tags: [ setup, deploy ]
+
+- name: Install build packages
+  yum:
+    name: "{{ deploy_build_packages }}"
+  when: ansible_distribution_major_version|int <= 7
+  tags: [ setup ]
+
+- name: Install build packages
+  dnf:
+    name: "{{ deploy_build_packages }}"
+  when: ansible_distribution_major_version|int >= 8
+  tags: [ setup ]
+
+- name: Build application
+  shell: >
+    source /etc/profile.d/rvm.sh &&
+    bundle config build.nokogiri --use-system-libraries &&
+    bundle install --clean --without development --path vendor/bundle &&
+    bundle exec rake assets:precompile &&
+    bundle exec rake tmp:cache:clear
+  args:
+    executable: /bin/bash
+    chdir: "{{ ci_project_dir }}"
+  become: yes
+  become_user: gitlab-runner
+  tags: [ build ]
+
+- name: Test tag section
+  block:
+    - name: Cancel connects to test db
+      postgresql_query:
+        login_host: "{{ deploy_test_db.host }}"
+        login_user: "{{ deploy_test_db.user }}"
+        login_password: "{{ deploy_test_db.password }}"
+        db: postgres
+        query: "{{ item }}"
+      loop:
+        - "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{{ deploy_test_db.name }}' AND pid <> pg_backend_pid();"
+
+    - name: db:migrate
+      shell: >
+        source /etc/profile.d/rvm.sh &&
+        bundle exec rake db:reset &&
+        bundle exec rake db:migrate
+      args:
+        executable: /bin/bash
+        chdir: "{{ ci_project_dir }}"
+
+    - name: rspec spec
+      shell: >
+        source /etc/profile.d/rvm.sh &&
+        bundle exec rspec spec
+      args:
+        executable: /bin/bash
+        chdir: "{{ ci_project_dir }}"
+  become: yes
+  become_user: gitlab-runner
+  tags: [ test ]
+
+- name: Template upstreams (disable current server)
+  delegate_to: "{{ deploy_lb_node }}"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - etc/nginx/conf.d/upstream.conf
+  vars:
+    deploy_state: begin
+  notify: validate nginx
+  tags: [ deploy ]
+
+- meta: flush_handlers
+  tags: [ deploy ]
+
+- name: Deploy tag section
+  block:
+    - name: Delete old app dir
+      file:
+        path: "/home/{{ deploy_user }}/{{ deploy_app }}"
+        state: absent
+
+    - name: Copy new app
+      shell: >
+        cp -a {{ ci_project_dir }} /home/{{ deploy_user }}/ &&
+        chown -R {{ deploy_user }}:{{ deploy_user }} /home/{{ deploy_user }}/{{ deploy_app }} &&
+        find /home/{{ deploy_user }}/{{ deploy_app }} -type d -execdir chmod o+rx '{}' \;
+
+    - name: db:migrate
+      become: yes
+      become_user: "{{ deploy_user }}"
+      shell: >
+        source /etc/profile.d/rvm.sh &&
+        bundle exec rake db:migrate
+      args:
+        executable: /bin/bash
+        chdir: "/home/{{ deploy_user }}/{{ deploy_app }}"
+
+    - name: Include role rvm (puma)
+      include_role:
+        name: rvm
+        tasks_from: puma.yml
+      vars:
+        rvm_puma_restart: True
+  tags: [ deploy ]
+
+- name: Delegate LB section
+  block:
+    - name: Check app health uri
+      uri:
+        url: "http://{{ ansible_host }}:9292/health/simple"
+        return_content: yes
+      register: reg_puma_health
+      until: reg_puma_health.content is search('ok')
+      delay: 2
+      retries: 9
+
+    - name: Template upstreams (enable current server)
+      template:
+        src: "{{ item }}.j2"
+        dest: "/{{ item }}"
+        owner: root
+        group: root
+        mode: 0644
+      loop:
+        - etc/nginx/conf.d/upstream.conf
+      vars:
+        deploy_state: end
+      notify: validate nginx
+  delegate_to: "{{ deploy_lb_node }}"
+  tags: [ deploy ]
+
+- meta: flush_handlers
+  tags: [ deploy ]
+...

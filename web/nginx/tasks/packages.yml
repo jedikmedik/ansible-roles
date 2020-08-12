@@ -1,0 +1,23 @@
+---
+- name: Yum section
+  block:
+    - name: Yum install epel repo
+      yum:
+        name: epel-release
+
+    - name: Yum install packages
+      yum:
+        name: "{{ nginx_packages|union(nginx_packages_7)|union(nginx_modules_rpm) }}"
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf section
+  block:
+    - name: Dnf install epel repo
+      dnf:
+        name: epel-release
+
+    - name: Dnf install packages
+      dnf:
+        name: "{{ nginx_packages|union(nginx_packages_8)|union(nginx_modules_rpm) }}"
+  when: ansible_distribution_major_version|int >= 8
+...

@@ -1,0 +1,65 @@
+---
+- name: Get and unpack blackbox_exporter archive
+  unarchive:
+    src: "https://github.com/prometheus/blackbox_exporter/releases/download/v{{ prom_blackbox_exporter_version }}/blackbox_exporter-{{ prom_blackbox_exporter_version }}.linux-amd64.tar.gz"
+    remote_src: yes
+    dest: /usr/local/bin
+    extra_opts:
+      - --strip-components=1
+      - "blackbox_exporter-{{ prom_blackbox_exporter_version }}.linux-amd64/blackbox_exporter"
+    creates: "/var/lib/flags/blackbox_exporter_v{{ prom_blackbox_exporter_version }}_installed"
+  register: prom_reg_exporter_unarch
+
+- name: Touch install blackbox_exporter flag
+  file:
+    path: "/var/lib/flags/blackbox_exporter_v{{ prom_blackbox_exporter_version }}_installed"
+    state: touch
+  when: prom_reg_exporter_unarch.changed
+
+- name: Copy blackbox_exporter.service
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - path: etc/systemd/system/blackbox_exporter.service
+  notify:
+    - reload systemd
+    - restart blackbox_exporter
+
+- name: Create user for running blackbox_exporter
+  user:
+    name: "blackbox_exporter"
+    comment: "user for start blackbox_exporter"
+    shell: "/usr/sbin/nologin"
+    home: "/home/blackbox_exporter"
+    state: "present"
+
+- name: create dir for blackbox_exporter configs
+  file:
+    path: "/etc/blackbox_exporter"
+    state: directory
+    mode: 0755
+    owner: blackbox_exporter
+    group: blackbox_exporter
+
+- name: Copy blackbox_exporter config
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: blackbox_exporter
+    group: blackbox_exporter
+    mode: 0644
+  loop:
+    - path: etc/blackbox_exporter/blackbox.yml
+  notify:
+    - restart blackbox_exporter
+
+- name: blackbox_exporter service state
+  systemd:
+    name: blackbox_exporter.service
+    enabled: yes
+    state: started
+...

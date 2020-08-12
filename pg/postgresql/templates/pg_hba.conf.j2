@@ -1,0 +1,34 @@
+# THIS FILE IS ANSIBLE MANAGED.
+# HANDS OFF!
+#
+# pg_hba.conf: client authentication control file for PostgreSQL
+# Designed exclusively for Southbridge LLC by nbw74, 2017 A. D.
+# v.0.1
+#
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Local socket connections (peer)
+local	all		all					peer map=supervisor
+# IPv4 local connections (authenticated)
+{% if postgresql_hba_tcp_local is defined %}
+{% for item in postgresql_hba_tcp_local %}
+host	{{ item.db }}		{{ item.user }}		127.0.0.1/32		md5
+{% endfor %}
+{% endif %}
+## ANSIBLE MANAGED ##
+# IPv4 local connections (ident):
+host	all		all		127.0.0.1/32		md5
+# IPv4 remote connections
+{% if postgresql_hba_tcp is defined %}
+{% for item in postgresql_hba_tcp %}
+host	{{ item.db }}		{{ item.user }}		{{ item.address }}		{{ item.method|d('md5') }}
+{% endfor %}
+{% endif %}
+{% if postgresql_hba_tcp_ident is defined %}
+# IPv4 remote connections (ident)
+{% for item in postgresql_hba_tcp_ident %}
+host	{{ item.db }}		{{ item.user }}		{{ item.address }}		ident map=remote
+{% endfor %}
+{% endif %}
+
+### EOF ###

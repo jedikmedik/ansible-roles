@@ -1,0 +1,22 @@
+---
+- name: Pacemaker packages
+  yum:
+    name: "{{ pcmk_packages }}"
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Section 8
+  block:
+    - name: Add rhel-8-beta repo
+      yum_repository:
+        name: rhel-8-for-x86_64-ha-beta-rpms
+        description: Red Hat Enterprise Linux 8 for x86_64 - HighAvailability Beta (RPMs)
+        baseurl: https://downloads.redhat.com/redhat/rhel/rhel-8-beta/add-ons/ha/x86_64/
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-beta,file:///etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
+
+    - name: Pacemaker packages
+      dnf:
+        name: "{{ pcmk_packages }}"
+  when: ansible_distribution_major_version|int >= 8
+...

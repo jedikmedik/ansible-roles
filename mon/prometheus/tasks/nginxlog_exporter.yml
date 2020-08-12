@@ -1,0 +1,43 @@
+---
+- name: Stat flag file
+  stat:
+    path: "/var/lib/flags/nginxlog_exporter_v{{ prom_nginxlog_exporter_version }}_installed"
+  register: prom_reg_nginx_exporter_installed
+
+- name: Download prometheus-nginxlog-exporter
+  get_url:
+    url: >
+      https://github.com/martin-helmich/prometheus-nginxlog-exporter/releases/download/v{{ prom_nginxlog_exporter_version }}/prometheus-nginxlog-exporter
+    dest: /usr/local/bin/
+    mode: 0755
+  register: prom_reg_nginx_exporter_get
+  when: not prom_reg_nginx_exporter_installed.stat.exists
+
+- name: Touch install node_exporter flag
+  file:
+    path: "/var/lib/flags/nginxlog_exporter_v{{ prom_nginxlog_exporter_version }}_installed"
+    state: touch
+  when: prom_reg_nginx_exporter_get.changed
+
+- name: Copy prometheus-nginxlog-exporter.service and default config
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: "{{ item.force|d(True)|ternary('yes', 'no') }}"
+  loop:
+    - path: etc/systemd/system/prometheus-nginxlog-exporter.service
+    - path: etc/prometheus-nginxlog-exporter.hcl
+      force: no
+  notify:
+    - reload systemd
+    - restart nginxlog_exporter
+
+- name: Nginxlog_exporter service state
+  systemd:
+    name: prometheus-nginxlog-exporter.service
+    enabled: yes
+    state: started
+...

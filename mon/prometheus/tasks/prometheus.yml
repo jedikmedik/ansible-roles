@@ -1,0 +1,77 @@
+---
+- name: Create dirs
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+  loop:
+    - path: /etc/prometheus
+
+- name: Get and unpack archive I
+  unarchive:
+    src: "https://github.com/prometheus/prometheus/releases/download/v{{ prom_version }}/prometheus-{{ prom_version }}.linux-amd64.tar.gz"
+    remote_src: yes
+    dest: /usr/local/bin
+    extra_opts:
+      - --strip-components=1
+      - "prometheus-{{ prom_version }}.linux-amd64/prometheus"
+      - "prometheus-{{ prom_version }}.linux-amd64/promtool"
+    creates: "/var/lib/flags/prometheus_v{{ prom_version }}_installed_I"
+  register: prom_reg_unarch_I
+
+- name: Touch install flag I
+  file:
+    path: "/var/lib/flags/prometheus_v{{ prom_version }}_installed_I"
+    state: touch
+  when: prom_reg_unarch_I.changed
+
+- name: Get and unpack archive II
+  unarchive:
+    src: "https://github.com/prometheus/prometheus/releases/download/v{{ prom_version }}/prometheus-{{ prom_version }}.linux-amd64.tar.gz"
+    remote_src: yes
+    dest: /etc/prometheus
+    extra_opts:
+      - --strip-components=1
+      - "prometheus-{{ prom_version }}.linux-amd64/console_libraries"
+      - "prometheus-{{ prom_version }}.linux-amd64/consoles"
+    creates: "/var/lib/flags/prometheus_v{{ prom_version }}_installed_II"
+  register: prom_reg_unarch_II
+
+- name: Touch install flag II
+  file:
+    path: "/var/lib/flags/prometheus_v{{ prom_version }}_installed_II"
+    state: touch
+  when: prom_reg_unarch_II.changed
+
+- name: Template prometheus.yml
+  template:
+    src: "{{ item.path }}.j2"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - path: etc/prometheus/prometheus.yml
+  notify: reload prometheus
+
+- name: Template prometheus.service
+  template:
+    src: "{{ item.path }}.j2"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - path: etc/systemd/system/prometheus.service
+  notify:
+    - reload systemd
+    - restart prometheus
+
+- name: Prometheus service state
+  systemd:
+    name: prometheus.service
+    enabled: yes
+    state: started
+...

@@ -1,0 +1,60 @@
+---
+- name: Verify role requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+      - ansible_version.full is version('2.8.0', '>=')
+    msg: "This role is for RHEL (CentOS) version 7 or higher."
+
+- name: Check if terraform binary already present
+  stat:
+    path: "{{ terraform.bin_path|d('/usr/bin') }}/terraform"
+  register: __terraform_stat
+
+- name: Get terraform version if installed
+  command: >
+    {{ terraform.bin_path|d('/usr/bin') }}/terraform --version
+  register: __terraform_ver
+  when: __terraform_stat.stat.exists
+  changed_when: no
+
+- name: Install/upgrade section
+  block:
+    - name: Install unzip (yum)
+      yum:
+        name: unzip
+      when: ansible_distribution_major_version|int <= 7
+
+    - name: Install unzip (dnf)
+      dnf:
+        name: unzip
+      when: ansible_distribution_major_version|int >= 8
+
+    - name: Create temporary download directory
+      tempfile:
+        state: directory
+        prefix: ansible.terraform_
+      register: __terraform_dir
+
+    - name: Download zip archive
+      get_url:
+        url: >
+          https://releases.hashicorp.com/terraform/{{ terraform.version }}/terraform_{{ terraform.version }}_{{ terraform.osarch|d('linux_amd64') }}.zip
+        dest: "{{ __terraform_dir.path }}"
+      register: __terraform_zip
+
+    - name: Unpack zip archive
+      unarchive:
+        src: "{{ __terraform_zip.dest }}"
+        dest: "{{ terraform.bin_path|d('/usr/bin') }}"
+        remote_src: yes
+
+    - name: Remove temp dir
+      file:
+        dest: "{{ __terraform_dir.path }}"
+        state: absent
+  when: >
+    not __terraform_stat.stat.exists or
+    __terraform_ver.stdout|d('nil') is not search(terraform.version)
+...

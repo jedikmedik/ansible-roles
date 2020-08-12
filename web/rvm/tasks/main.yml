@@ -1,0 +1,51 @@
+---
+- name: Check required variable
+  assert:
+    that:
+      - rvm_ruby_version|d('') != ""
+    msg: "Required variable is not defined"
+
+- name: Check existing gpg keys
+  command: >
+    gpg --list-keys
+  register: reg_gpg_keys
+  changed_when: no
+
+- name: Import first gpg key if needed
+  shell: >
+    curl -sSL https://rvm.io/mpapis.asc | gpg --import -
+  args:
+    warn: no
+  when: reg_gpg_keys.stdout is not search('Michal Papis')
+
+- name: Import second gpg key if needed (I)
+  shell: >
+    curl -sSL https://rvm.io/pkuczynski.asc | gpg2 --import -
+  args:
+    warn: no
+  when: reg_gpg_keys.stdout is not search('Piotr Kuczynski')
+
+- name: Install rvm
+  shell: >
+    curl -L get.rvm.io | bash -s stable
+  args:
+    creates: /usr/local/rvm/bin/rvm
+    warn: no
+
+- name: Install ruby
+  shell: >
+    source /etc/profile.d/rvm.sh &&
+    rvm install {{ rvm_ruby_version }}
+  args:
+    executable: /bin/bash
+    creates: "/usr/local/rvm/rubies/ruby-{{ rvm_ruby_version }}/bin/ruby"
+
+- name: Set /etc/rvmrc permissions
+  file:
+    path: /etc/rvmrc
+    mode: "0664"
+
+- name: Include puma
+  include_tasks: puma.yml
+  when: rvm_puma|length > 0
+...

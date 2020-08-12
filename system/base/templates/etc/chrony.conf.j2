@@ -1,0 +1,21 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+{% if base_ntp_custom_servers is defined %}
+{% for item in base_ntp_custom_servers %}
+server {{ item }} iburst
+{% endfor %}
+{% else %}
+server 0.{{ base_ntp_pool }}.ntp.org iburst
+server 1.{{ base_ntp_pool }}.ntp.org iburst
+server 2.{{ base_ntp_pool }}.ntp.org iburst
+server 3.{{ base_ntp_pool }}.ntp.org iburst
+{% endif %}
+
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+keyfile /etc/chrony.keys
+leapsectz right/UTC
+logdir /var/log/chrony
+
+## EOF ##

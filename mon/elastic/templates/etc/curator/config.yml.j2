@@ -1,0 +1,30 @@
+---
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+# Remember, leave a key empty if there is no value. None will be a string,
+# not a Python "NoneType"
+client:
+{% if elk_curator_config_hosts is defined %}
+  hosts: {{ elk_curator_config_hosts }}
+{% else %}
+  hosts: 127.0.0.1
+{% endif %}
+{% if elk_curator_config_port is defined %}
+  port: {{ elk_curator_config_port }}
+{% else %}
+  port: 9200
+{% endif %}
+  url_prefix:
+  use_ssl: False
+  certificate:
+  client_cert:
+  client_key:
+  ssl_no_validate: False
+  http_auth:
+  timeout: 30
+  master_only: False
+logging:
+  loglevel: ERROR
+  logfile:
+  logformat: default
+  # Set to empty list ([]) to debug EL/urllib3 calls:
+  blacklist: ['elasticsearch', 'urllib3']

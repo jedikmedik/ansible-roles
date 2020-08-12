@@ -1,0 +1,9 @@
+# -*- mode: jinja2; mode: view -*- 
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+# Curator:
+{% if elk_install_curator %}
+{{ elk_curator_schedule }} {{ elk_curator_cronline }}
+{% else %}
+# Curator turned off in ansible manifest
+{% endif %}

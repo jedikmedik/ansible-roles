@@ -1,0 +1,78 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+
+{% if nginx_modules_so|length > 0 %}
+{% for item in nginx_modules_so %}
+load_module		"modules/{{ item }}";
+{% endfor %}
+
+{% if "ngx_rtmp_module.so" in nginx_modules_so %}
+include			include.d/module_rtmp.conf;
+{% endif %}
+
+{% endif %}
+user			nginx;
+worker_processes	{{ nginx_core.worker_processes|d('auto') }};
+error_log		/var/log/nginx/error.log;
+{% if ansible_service_mgr == 'systemd' %}
+pid			/run/nginx.pid;
+{% else %}
+pid			/var/run/nginx.pid;
+{% endif %}
+
+worker_rlimit_nofile	{{ nginx_core.worker_rlimit_nofile|d('65536') }};
+
+events {
+    worker_connections	{{ nginx_core.worker_connections|d('16384') }};
+}
+
+http {
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+		      '$status $body_bytes_sent "$http_referer" '
+		      '"$http_user_agent" $upstream_addr $upstream_response_time $request_time $host';
+
+    access_log		/var/log/nginx/access.log  main;
+
+    sendfile		on;
+    tcp_nopush		on;
+    tcp_nodelay		on;
+    server_tokens	off;
+
+    large_client_header_buffers		{{ nginx_http.large_client_header_buffers|d('8 8k') }};
+{% if nginx_http.server_names_hash_max_size is defined %}
+    server_names_hash_max_size		{{ nginx_http.server_names_hash_max_size }};
+{% endif %}
+{% if nginx_http.server_names_hash_bucket_size is defined %}
+    server_names_hash_bucket_size	{{ nginx_http.server_names_hash_bucket_size }};
+{% endif %}
+
+    keepalive_timeout			{{ nginx_http.keepalive_timeout|d('150') }};
+    reset_timedout_connection		{{ nginx_http.reset_timedout_connection|d('on') }};
+
+    open_file_cache			{{ nginx_http.open_file_cache|d('max=1000 inactive=300s') }};
+    open_file_cache_errors		{{ nginx_http.open_file_cache_errors|d('off') }};
+    open_file_cache_min_uses		{{ nginx_http.open_file_cache_min_uses|d('2') }};
+    open_file_cache_valid		{{ nginx_http.open_file_cache_valid|d('300s') }};
+
+{% for key, value in nginx_http_directives|dictsort %}
+    {{ key }}		{{ value }};
+{% endfor %}
+
+    ssl_session_cache	shared:SSL:20m;
+    ssl_session_timeout	180m;
+
+    gzip		on;
+    gzip_comp_level	{{ nginx_gzip.gzip_comp_level|d('3') }};
+    gzip_min_length	256;
+    gzip_proxied	any;
+    gzip_types		text/plain text/css text/javascript text/json text/x-component text/xml
+			application/javascript application/x-javascript application/json
+			application/xml application/xml+rss application/atom+xml
+			image/svg+xml;
+
+    include		mime.types;
+    default_type	application/octet-stream;
+
+    include		conf.d/*.conf;
+    include		vhosts.d/*.conf;
+}
+

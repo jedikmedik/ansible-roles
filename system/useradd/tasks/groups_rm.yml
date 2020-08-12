@@ -1,0 +1,11 @@
+---
+- name: Remove groups
+  group:
+    name: "{{ item.name }}"
+    state: absent
+  when:
+    - not item.state|d(True)
+  loop: "{{ useradd_groups }}"
+  loop_control:
+    label: "group {{ item.name }}"
+...

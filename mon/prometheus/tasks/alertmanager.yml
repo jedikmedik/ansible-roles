@@ -1,0 +1,65 @@
+---
+- name: Get and unpack alertmanager archive
+  unarchive:
+    src: "https://github.com/prometheus/alertmanager/releases/download/v{{ prom_alertmanager_version }}/alertmanager-{{ prom_alertmanager_version }}.linux-amd64.tar.gz"
+    remote_src: yes
+    dest: /usr/local/bin
+    extra_opts:
+      - --strip-components=1
+      - "alertmanager-{{ prom_alertmanager_version }}.linux-amd64/alertmanager"
+    creates: "/var/lib/flags/alertmanager_v{{ prom_alertmanager_version }}_installed"
+  register: prom_reg_exporter_unarch
+
+- name: Touch install alertmanager flag
+  file:
+    path: "/var/lib/flags/alertmanager_v{{ prom_alertmanager_version }}_installed"
+    state: touch
+  when: prom_reg_exporter_unarch.changed
+
+- name: Copy alertmanager.service
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - path: etc/systemd/system/alertmanager.service
+  notify:
+    - reload systemd
+    - restart alertmanager
+
+- name: Create user for running alertmanager
+  user:
+    name: "alertmanager"
+    comment: "user for start alertmanager"
+    shell: "/usr/sbin/nologin"
+    home: "/home/alertmanager"
+    state: "present"
+
+- name: create dir for alertmanager configs
+  file:
+    path: "/etc/alertmanager"
+    state: directory
+    mode: 0755
+    owner: alertmanager
+    group: alertmanager
+
+- name: Copy alertmanager config
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: alertmanager
+    group: alertmanager
+    mode: 0644
+  loop:
+    - path: etc/alertmanager/alertmanager.yml
+  notify:
+    - restart alertmanager
+
+- name: alertmanager service state
+  systemd:
+    name: alertmanager.service
+    enabled: yes
+    state: started
+...

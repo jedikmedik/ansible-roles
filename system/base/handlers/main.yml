@@ -1,0 +1,20 @@
+---
+- name: etckeeper commit
+  command: >
+    etckeeper commit "ansible base role installed"
+
+- name: reload sysctl
+  systemd:
+    name: systemd-sysctl.service
+    state: restarted
+
+- name: restart journald
+  systemd:
+    name: systemd-journald.service
+    state: restarted
+
+- name: restart chronyd
+  systemd:
+    name: chronyd.service
+    state: restarted
+...

@@ -1,0 +1,40 @@
+---
+- name: Import packages
+  import_tasks: packages.yml
+
+- name: Template main config file
+  template:
+    src: "{{ item.path }}.j2"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|d('0644') }}"
+  notify: reload pgbouncer
+  loop:
+    - path: etc/pgbouncer/pgbouncer.ini
+
+- name: Template auth config files
+  template:
+    src: "{{ item.path }}.j2"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: pgbouncer
+    mode: "{{ item.mode|d('0640') }}"
+  notify: reload pgbouncer
+  loop:
+    - path: etc/pgbouncer/databases.ini
+    - path: etc/pgbouncer/userlist.txt
+    - path: etc/pgbouncer/bouncer_hba.conf
+
+- name: Set reasonable permissions on socket dir
+  file:
+    path: "{{ pgbouncer_config.unix_socket_dir|d('/var/run/pgbouncer') }}"
+    state: directory
+    mode: 0755
+
+- name: Manage pgbouncer service
+  service:
+    name: pgbouncer
+    enabled: "{{ pgbouncer_enable|ternary('yes','no') }}"
+    state: "{{ pgbouncer_enable|ternary('started','stopped') }}"
+...

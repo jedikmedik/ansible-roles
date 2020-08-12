@@ -1,0 +1,11 @@
+---
+base_add_packages: []
+base_add_packages_7: []
+base_add_packages_8: []
+base_southbridge_repo: True
+base_ntp_custom_servers: []
+base_ntp_pool: ru
+base_selinux_state: enforcing
+base_sysctl_vars: { }
+base_zsh_enable: False
+...

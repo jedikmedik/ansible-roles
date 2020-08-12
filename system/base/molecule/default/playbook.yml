@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  no_log: false
+  become: yes
+  vars:
+    - base_selinux_state: disabled
+  roles:
+    - role: base

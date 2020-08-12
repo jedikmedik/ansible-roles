@@ -1,0 +1,24 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+{% if nftables.ip.nat is defined %}
+table ip nat {
+{% if nftables.ip.nat.prerouting is defined %}
+	chain prerouting {
+		type nat hook prerouting priority -100; policy accept;
+{% for rule in nftables.ip.nat.prerouting %}
+		{{ rule }}{% if not loop.last %};{% endif %}
+
+{% endfor %}
+	}
+{% endif %}
+{% if nftables.ip.nat.postrouting is defined %}
+
+	chain postrouting {
+		type nat hook postrouting priority 100; policy accept;
+{% for rule in nftables.ip.nat.postrouting %}
+		{{ rule }}{% if not loop.last %};{% endif %}
+
+{% endfor %}
+	}
+{% endif %}
+}
+{% endif %}

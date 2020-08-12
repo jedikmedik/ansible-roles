@@ -1,0 +1,47 @@
+---
+- name: Template sysctl custom vars
+  template:
+    src: "{{ item }}.j2"
+    dest: "/{{ item }}"
+    owner: root
+    mode: "0644"
+  loop:
+    - etc/sysctl.d/99-common.conf
+  notify: reload sysctl
+
+- name: Settings in journald ini-file
+  ini_file:
+    dest: /etc/systemd/journald.conf
+    section: Journal
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    no_extra_spaces: yes
+  loop:
+    - { option: 'Storage', value: 'persistent' }
+    - { option: 'Compress', value: 'yes' }
+  notify: restart journald
+
+- name: Template NTP configuration file
+  template:
+    src: etc/chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart chronyd
+
+- name: chronyd service status
+  service:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: Populate /etc/hosts
+  blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: HOSTS"
+    block: |
+      {% for host in groups['all']|sort %}
+      {{ hostvars[host].ansible_host }} {{ hostvars[host].inventory_hostname }}
+      {% endfor %}
+...

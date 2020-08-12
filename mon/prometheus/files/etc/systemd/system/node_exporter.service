@@ -1,0 +1,12 @@
+# THIS FILE IS MANAGED BY ANSIBLE, ALL CHANGES WILL BE LOST
+[Unit]
+Description=Node Exporter service
+After=network.target
+
+[Service]
+User=prometheus
+Group=prometheus
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target

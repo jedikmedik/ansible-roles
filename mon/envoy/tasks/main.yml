@@ -1,0 +1,117 @@
+---
+- name: Verify OS requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+    msg: "This role is for RHEL (CentOS) version 7 or higher."
+
+- name: Setup envoy repos
+  yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.description }}"
+    baseurl: "{{ item.baseurl }}"
+    enabled: "{{ item.enabled|ternary('yes', 'no') }}"
+    gpgcheck: yes
+    gpgkey:
+      - https://getenvoy.io/gpg
+    file: tetrate-getenvoy
+    repo_gpgcheck: yes
+  loop:
+    - name: tetrate-getenvoy-stable
+      description: Tetrate GetEnvoy - Stable
+      baseurl: https://tetrate.bintray.com/getenvoy-rpm/centos/$releasever/$basearch/stable/
+      enabled: True
+    - name: tetrate-getenvoy-nightly
+      description: Tetrate GetEnvoy - Nightly
+      baseurl: https://tetrate.bintray.com/getenvoy-rpm/centos/$releasever/$basearch/nightly/
+      enabled: False
+
+- name: Yum install packages
+  yum:
+    name: "{{ envoy_packages }}"
+  when: ansible_distribution_major_version|int <= 7
+
+- name: Dnf install packages
+  dnf:
+    name: "{{ envoy_packages }}"
+  when: ansible_distribution_major_version|int >= 8
+
+- name: Create envoy user
+  user:
+    name: envoy
+    home: /var/lib/envoy
+    shell: /sbin/nologin
+
+- name: Create required dirs
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner|d('root') }}"
+    group: "{{ item.group|d(item.owner|d('root')) }}"
+    mode: 0755
+  loop:
+    - path: /etc/envoy
+    - path: /var/log/envoy
+      owner: envoy
+
+- name: Copy main service file
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|d('0644') }}"
+    force: "{{ item.force|d(True)|ternary('yes', 'no') }}"
+  loop:
+    - path: etc/systemd/system/envoy.service
+  notify:
+    - reload systemd
+    - restart envoy
+
+- name: Copy service files
+  copy:
+    src: "{{ item.path }}"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|d('0644') }}"
+    force: "{{ item.force|d(True)|ternary('yes', 'no') }}"
+  loop:
+    - path: usr/local/bin/envoy.start.sh
+      mode: "0755"
+  notify: restart envoy
+
+- name: Template service files
+  template:
+    src: "{{ item.path }}.j2"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|d('0644') }}"
+    force: "{{ item.force|d(True)|ternary('yes', 'no') }}"
+  loop:
+    - path: usr/local/bin/envoy-hot-restarter.py
+      mode: "0755"
+  notify: restart envoy
+
+- name: Template envoy config
+  template:
+    src: "{{ item.path }}.j2"
+    dest: "/{{ item.path }}"
+    owner: root
+    group: root
+    mode: "{{ item.mode|d('0644') }}"
+    force: "{{ item.force|d(True)|ternary('yes', 'no') }}"
+  loop:
+    - path: etc/envoy/envoy.yaml
+      force: yes
+  notify:
+    - reload envoy
+
+- name: envoy service state
+  systemd:
+    name: envoy.service
+    enabled: yes
+    state: started
+...

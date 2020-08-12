@@ -1,0 +1,36 @@
+---
+- name: Verify OS requirements
+  assert:
+    that:
+      - ansible_distribution_file_variety == "RedHat"
+      - ansible_distribution_major_version|int >= 7
+    msg: "This role is for RHEL (CentOS) version 7 or higher."
+
+- name: Include packages
+  include_tasks: packages.yml
+
+- name: Include tasks for pcs 0.9
+  include_tasks: pcs_9.yml
+  when: ansible_distribution_major_version|int == 7
+
+- name: Include tasks for pcs 0.10
+  include_tasks: pcs_10.yml
+  when: ansible_distribution_major_version|int == 8
+
+- name: Cluster services enabled
+  systemd:
+    name: "{{ item }}.service"
+    state: started
+    enabled: yes
+  loop: [ corosync, pacemaker ]
+
+- name: Periodic restart of pcsd
+  cron:
+    name: pcsd_restart
+    job: "/usr/bin/systemctl restart pcsd.service"
+    cron_file: "_sb_pcsd_restart"
+    special_time: daily
+    user: root
+    state: "{{ pcmk_pcsd_restart_daily|ternary('present', 'absent') }}"
+  notify: reload crond
+...

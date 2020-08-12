@@ -1,0 +1,32 @@
+---
+base_packages:
+  - bzip2
+  - chrony
+  - etckeeper
+  - gdisk
+  - htop
+  - tcping
+  - man
+  - mc
+  - rsync
+  - tmux
+  - tree
+  - vim
+  - zsh
+  - bash-completion
+
+base_remove_packages:
+  - abrt
+  - 'iwl*'
+
+base_env_color:
+  production: RED
+  prod: RED
+  development: GREEN
+  dev: GREEN
+  testing: YELLOW
+  test: YELLOW
+  auxiliary: BLUE
+  aux: BLUE
+  localhost: MAGENTA
+...

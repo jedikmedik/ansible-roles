@@ -1,0 +1,112 @@
+---
+- name: Try add users
+  block:
+    - name: Users
+      user:
+        name: "{{ item.name }}"
+        comment: "{{ item.comment|d('') }}"
+        groups: "{{ item.groups|d('') }}"
+        shell: "{{ item.shell|d('/bin/bash') }}"
+        home: "{{ item.home|d('/home/' ~ item.name) }}"
+        state: "{{ item.state|d(True)|ternary('present','absent') }}"
+      when:
+        - item.uid is not defined
+        - item.name != 'root'
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "user {{ item.name }}"
+
+    - name: Users with UID
+      user:
+        name: "{{ item.name }}"
+        comment: "{{ item.comment|d('') }}"
+        groups: "{{ item.groups|d('~') }}"
+        shell: "{{ item.shell|d('/bin/bash') }}"
+        home: "{{ item.home|d('/home/' ~ item.name) }}"
+        uid: "{{ item.uid }}"
+        state: "{{ item.state|d(True)|ternary('present','absent') }}"
+      when:
+        - item.uid is defined
+        - item.uid|int != 0
+        - item.name != 'root'
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "user {{ item.name }}"
+
+    - name: Set password (plain)
+      user:
+        name: "{{ item.name }}"
+        password: "{{ item.password|password_hash('sha512', '3454') }}"
+        update_password: always
+      when:
+        - item.state|d(True)
+        - item.password is defined
+        - item.name != 'root'
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "plain password for user {{ item.name }}"
+
+    - name: Set password (hash)
+      user:
+        name: "{{ item.name }}"
+        password: "{{ item.password_hash }}"
+        update_password: always
+      when:
+        - item.state|d(True)
+        - item.password_hash is defined
+        - item.name != 'root'
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "hashed password for user {{ item.name }}"
+
+    - name: Generate SSH keys
+      user:
+        name: "{{ item.name }}"
+        generate_ssh_key: "{{ item.ssh_key.generate|d(True) }}"
+        ssh_key_type: "{{ item.ssh_key.type|d('rsa') }}"
+      when:
+        - item.state|d(True)
+        - item.ssh_key is defined
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "SSH keys for user {{ item.name }}"
+
+    - name: SSH authorized_keys
+      authorized_key:
+        user: "{{ item.0.name }}"
+        key: "{{ item.1.type|d('ssh-rsa') }} {{ item.1.data }}"
+        comment: "{{ item.1.comment }}"
+        key_options: "{{ item.1.options|d('') }}"
+        state: "{{ item.1.state|d(True)|ternary('present','absent') }}"
+        exclusive: no
+      when: item.0.state|d(True)
+      loop: "{{ useradd_users|subelements('public_keys', 'skip_missing=True') }}"
+      loop_control:
+        label: "public key for user {{ item.0.name }}"
+
+    - name: Set homedir mode
+      file:
+        path: "{{ item.home|d('/home/' ~ item.name) }}"
+        mode: "{{ item.home_mode }}"
+      when:
+        - item.home_mode is defined
+        - item.name != 'root'
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "homedir mode for user {{ item.name }}"
+
+    - name: Insert additional section in .bashrc
+      blockinfile:
+        path: "{{ item.home|d('/home/' ~ item.name) }}/.bashrc"
+        marker: "# {mark} ANSIBLE USERADD"
+        block: |
+          {{ item.bashrc_insert }}
+      when: item.bashrc_insert is defined
+      loop: "{{ useradd_users }}"
+      loop_control:
+        label: "{{ item.name }}"
+  rescue:
+    - name: Non-error message
+      debug:
+        msg: "NON-CRITICAL ERROR, CONTINUING"
+...

@@ -1,0 +1,35 @@
+---
+- name: Template instantiated puma@.service
+  template:
+    src: "{{ item }}.j2"
+    dest: "/{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+  loop:
+    - etc/systemd/system/puma@.service
+  notify: reload systemd
+
+- meta: flush_handlers
+
+- name: Template puma service environment files
+  template:
+    src: home/env.j2
+    dest: "/home/{{ instance.user }}/{{ deploy_app }}/.env"
+    owner: "{{ instance.user }}"
+    mode: 0644
+  loop: "{{ rvm_puma }}"
+  loop_control:
+    loop_var: instance
+    label: "{{ instance.user }}"
+
+- name: (Re)start puma instances
+  systemd:
+    name: "puma@{{ instance.user }}.service"
+    state: "{{ rvm_puma_restart|ternary('restarted', 'started') }}"
+    enabled: yes
+  loop: "{{ rvm_puma }}"
+  loop_control:
+    loop_var: instance
+    label: "{{ instance.user }}"
+...
